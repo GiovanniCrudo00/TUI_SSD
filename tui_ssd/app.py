@@ -6,57 +6,24 @@ from typing import Tuple
 from valid8 import ValidationError
 
 from tui_ssd.menu import *
+# TODO: Implement and modify this after the implementation of domain
+# TODO: When sorting by something is activated, maintain the sorting until something else is selected (by default no sorting)
 
 
 class App:
-    __filename = Path(__file__).parent.parent / 'default.csv'
-    __delimiter = '\t'
-    __restricted = False
-    __restricted_author = Author("NONE")
-
     def __init__(self):
-        self.__menu = Menu.Builder(Description('Spotify Music Archive'), auto_select=lambda: self.__check_restricted()) \
-            .with_entry(Entry.create('1', 'Add song', on_selected=lambda: self.__add_song())) \
-            .with_entry(Entry.create('2', 'Remove song by index', on_selected=lambda: self.__remove_song())) \
-            .with_entry(Entry.create('3', 'Sort by title', on_selected=lambda: self.__sort_by_title())) \
-            .with_entry(Entry.create('4', 'Sort by duration', on_selected=lambda: self.__sort_by_duration())) \
-            .with_entry(Entry.create('5', 'Extract list of authors', on_selected=lambda: self.__list_of_authors())) \
-            .with_entry(Entry.create('6', 'Restrict view to song of a given author', on_selected=lambda: self.__set_restricted_author())) \
-            .with_entry(Entry.create('7', 'Remove restriction of author', on_selected=lambda: self.__remove_restriction())) \
-            .with_entry(Entry.create('0', 'Exit', on_selected=lambda: print('Bye!'), is_exit=True)) \
+        self.__menu = Menu.Builder(Description('Your Secure Weather TUI'), auto_select=lambda: self.__print_records()) \
+            .with_entry(Entry.create('1', 'Add new record', on_selected=lambda: self.__add_record())) \
+            .with_entry(Entry.create('2', 'Collect records from sensors', on_selected=lambda: self.__generate_records())) \
+            .with_entry(Entry.create('3', 'Sort by humidity', on_selected=lambda: self.__sort_by_humidity())) \
+            .with_entry(Entry.create('4', 'Sort by temperature', on_selected=lambda: self.__sort_by_temperature())) \
+            .with_entry(Entry.create('5', 'Sort by wind', on_selected=lambda: self.__sort_by_wind())) \
+            .with_entry(Entry.create('0', 'Exit', on_selected=lambda: print('Cya!'), is_exit=True)) \
             .build()
-        self.__music_archive = MusicArchive()
+        self.__secure_weather = SecureWeather()
 
-    def __check_restricted(self) -> None:
-        if not self.__restricted:
-            self.__print_songs()
-        else:
-            self.__print_songs_restricted()
-
-    def __remove_restriction(self) -> None:
-        self.__restricted_author = Author("NONE")
-        self.__restricted = False
-        print("RESTRICTION REMOVED!")
-
-    def __set_restricted_author(self) -> None:
-        auth = self.__read("Author", Author)
-        self.__restricted_author = auth
-        self.__restricted = True
-
-    def __print_songs_restricted(self) -> None:
-        print_sep = lambda: print('-' * 100)
-        print_sep()
-        print(f"SONGS RESTRICTED TO {self.__restricted_author}")
-        fmt = '%3s %-10s %-30s %-30s %10s'
-        print(fmt % ('#', 'DURATION', 'TITLE', 'AUTHOR', 'GENRE'))
-        print_sep()
-        restricted_songs = self.__music_archive.filter_by_author(self.__restricted_author)
-        for index in range(len(restricted_songs)):
-            song = restricted_songs[index]
-            print(fmt % (index + 1, song.duration.value, song.title.value, song.author.value, song.genre))
-        print_sep()
-
-    def __print_songs(self) -> None:
+    # TODO: Continue to modify from here
+    def __print_records(self) -> None:
         print_sep = lambda: print('-' * 100)
         print_sep()
         fmt = '%3s %-10s %-30s %-30s %10s'
@@ -67,13 +34,13 @@ class App:
             print(fmt % (index + 1, song.duration.value, song.title.value, song.author.value, song.genre))
         print_sep()
 
-    def __add_song(self) -> None:
+    def __add_record(self) -> None:
         song = Song(*self.__read_song())
         self.__music_archive.add_song(song)
         self.__save()
         print('Song added!')
 
-    def __remove_song(self) -> None:
+    def __generate_records(self) -> None:
         def builder(value: str) -> int:
             validate('value', int(value), min_value=0, max_value=self.__music_archive.songs())
             return int(value)
@@ -86,15 +53,15 @@ class App:
         self.__save()
         print('Song removed!')
 
-    def __sort_by_title(self) -> None:
+    def __sort_by_wind(self) -> None:
         self.__music_archive.sort_by_title()
         self.__save()
 
-    def __sort_by_duration(self) -> None:
+    def __sort_by_temperature(self) -> None:
         self.__music_archive.sort_by_duration()
         self.__save()
 
-    def __list_of_authors(self) -> None:
+    def __sort_by_humidity(self) -> None:
         rst = self.__music_archive.list_of_authors
         print("LIST OF AUTHORS:")
         print(str(rst))
