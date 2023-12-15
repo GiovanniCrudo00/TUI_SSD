@@ -8,15 +8,13 @@ from types import MappingProxyType
 from datetime import datetime
 
 """
-DOMAIN PRIMITIVES
+DOMAIN CLASSES
     Temperature: int                            Class:[DONE] Tests:[DONE]
     Humidity: int                               Class:[DONE] Tests:[DONE]
     Wind: int                                   Class:[DONE] Tests:[DONE]
     Condition: Enum from 1 to 4                 Class:[DONE] Tests:[DONE]
-    Date: datetime.datetime python class        Class:[] Tests:[]
-    
-AGGREGATE
-    Record                                      Class:[] Tests:[]
+    Date: datetime.datetime python class        Class:[DONE] Tests:[DONE]
+    Record                                      Class:[DONE] Tests:[]
     SecureWeather                               Class:[] Tests:[]
 """
 
@@ -111,10 +109,10 @@ class RecordDate:
         validate('create_key', create_key, equals=self.__create_key)
 
     @property
-    def value(self) -> str:  # TODO: Complete this
+    def value(self) -> str:
         return str(f"{self.day:02}/{self.month:02}/{self.year:04}@{self.hour:02}:{self.minute:02}:{self.second:02}")
 
-    def __str__(self):  # TODO: Complete this
+    def __str__(self):
         return str(f"{self.day:02}/{self.month:02}/{self.year:04}@{self.hour:02}:{self.minute:02}:{self.second:02}")
 
     @property
@@ -155,3 +153,19 @@ class RecordDate:
 
         return RecordDate(__created_date, RecordDate.__create_key)
 
+
+@typechecked
+@dataclass(frozen=True, order=True)
+class Record:
+    temperature: Temperature
+    humidity: Humidity
+    wind: Wind
+    condition: Condition
+    record_date: RecordDate
+
+
+@typechecked
+@dataclass(frozen=True)
+class SecureWeather:
+    # TODO: Implement this
+    ...

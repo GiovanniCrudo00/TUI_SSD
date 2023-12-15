@@ -1,6 +1,6 @@
 import pytest
 from valid8 import ValidationError
-from tui_ssd.domain import Temperature, Humidity, Wind, Condition, RecordDate
+from tui_ssd.domain import Temperature, Humidity, Wind, Condition, RecordDate, Record, SecureWeather
 
 
 # TESTS FOR TEMPERATURE
@@ -138,5 +138,25 @@ def test_correct_date_creation(date, expected_value):
     '31/12/1999 10:00:00'
 ])
 def test_wrong_date_raises_exception(date):
-    with pytest.raises(ValueError):  # ValidationError is inherited by ValueError, so we catch also the ValidationError exceptions
+    with pytest.raises(ValueError):
+        # ValidationError is inherited by ValueError, so we catch also the ValidationError exception here
         RecordDate.create(date)
+
+
+# TESTS FOR RECORD CLASS
+def test_correct_creation_of_a_record_instance():
+    temperature = Temperature(17)
+    humidity = Humidity(25)
+    wind = Wind(5)
+    condition = Condition.create('2')
+    rec_date = RecordDate.create('29/02/2000 10:00:45')
+    obj = Record(temperature, humidity, wind, condition, rec_date)
+    assert obj.temperature.value == 17 and str(obj.temperature) == '17'
+    assert obj.humidity.value == 25 and str(obj.humidity) == '25'
+    assert obj.wind.value == 5 and str(obj.wind) == '5'
+    assert obj.condition.value == str(obj.condition) == 'CLOUDY'
+    assert obj.record_date.value == str(obj.record_date) == '29/02/2000@10:00:45'
+
+
+# TODO: tests for SecureWeather class
+# TEST FOR SECURE WEATHER CLASS
