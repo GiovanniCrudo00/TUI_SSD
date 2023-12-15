@@ -1,6 +1,6 @@
 import pytest
 from valid8 import ValidationError
-from tui_ssd.domain import Temperature, Humidity, Wind, Condition
+from tui_ssd.domain import Temperature, Humidity, Wind, Condition, RecordDate
 
 
 # TESTS FOR TEMPERATURE
@@ -112,3 +112,31 @@ def test_correct_condition_creation_value_and_str(cond, expected_value):
     obj = Condition.create(cond)
     assert obj.value == expected_value
     assert str(obj) == expected_value
+
+
+# TESTS FOR RECORD DATE
+@pytest.mark.parametrize('date, expected_value', [
+    ('09/09/2000 15:34:11', "09/09/2000@15:34:11"),
+    ('01/01/2000 00:00:00', '01/01/2000@00:00:00'),
+    ('31/12/2999 23:59:59', '31/12/2999@23:59:59'),
+])
+def test_correct_date_creation(date, expected_value):
+    obj = RecordDate.create(date)
+    assert obj.value == expected_value
+
+
+@pytest.mark.parametrize('date', [
+    '29/02/2001 10:00:00',
+    '31/11/2000 10:00:00',
+    '30/11/2000 25:00:00',
+    '30/11/2000 10:60:00',
+    '30/11/2000 10:00:60',
+    'a',
+    '',
+    ' ',
+    '01/01/3000 10:00:00',
+    '31/12/1999 10:00:00'
+])
+def test_wrong_date_raises_exception(date):
+    with pytest.raises(ValueError):  # ValidationError is inherited by ValueError, so we catch also the ValidationError exceptions
+        RecordDate.create(date)
