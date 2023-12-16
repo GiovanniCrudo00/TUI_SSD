@@ -6,6 +6,8 @@ from typing import Tuple
 from valid8 import ValidationError
 
 from tui_ssd.menu import *
+
+
 # TODO: Implement and modify this after the implementation of domain
 # TODO: When sorting by something is activated, maintain the sorting until something else is selected (by default no sorting)
 
@@ -18,9 +20,10 @@ class App:
             .with_entry(Entry.create('3', 'Sort by humidity', on_selected=lambda: self.__sort_by_humidity())) \
             .with_entry(Entry.create('4', 'Sort by temperature', on_selected=lambda: self.__sort_by_temperature())) \
             .with_entry(Entry.create('5', 'Sort by wind', on_selected=lambda: self.__sort_by_wind())) \
+            .with_entry(Entry.create('6', 'Sort by ascending date', on_selected=lambda: self.__sort_by_wind())) \
             .with_entry(Entry.create('0', 'Exit', on_selected=lambda: print('Cya!'), is_exit=True)) \
             .build()
-        self.__secure_weather = SecureWeather()
+        self.__record_list = RecordList()
 
     # TODO: Continue to modify from here
     def __print_records(self) -> None:

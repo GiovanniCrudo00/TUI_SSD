@@ -95,7 +95,7 @@ class Condition:
 
 
 @typechecked
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class RecordDate:
     __date_value: datetime
     create_key: InitVar[Any] = field(default="it must be the __create_key")
@@ -166,6 +166,32 @@ class Record:
 
 @typechecked
 @dataclass(frozen=True)
-class SecureWeather:
-    # TODO: Implement this
-    ...
+class RecordList:
+    __records: List[Record] = field(default_factory=list, init=False)
+
+    @property
+    def records(self) -> int:  # Return the  number of records in the list (Utility method)
+        return len(self.__records)
+
+    def record(self, index: int) -> Record:  # Given an index return a record
+        validate("record_index", index, min_value=0, max_value=self.records - 1)
+        return self.__records[index]
+
+    def add_record(self, rec: Record) -> None:
+        self.__records.append(rec)
+
+    def remove_record(self, index: int) -> None:
+        validate("record_index", index, min_value=0, max_value=self.records - 1)
+        del self.__records[index]
+
+    def sort_by_temperature(self) -> None:
+        self.__records.sort(key=lambda x: x.temperature)
+
+    def sort_by_humidity(self) -> None:
+        self.__records.sort(key=lambda x: x.humidity)
+
+    def sort_by_wind(self) -> None:
+        self.__records.sort(key=lambda x: x.wind)
+
+    def sort_by_ascending_date(self) -> None:
+        self.__records.sort(key=lambda x: x.record_date)

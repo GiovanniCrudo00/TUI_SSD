@@ -1,6 +1,6 @@
 import pytest
 from valid8 import ValidationError
-from tui_ssd.domain import Temperature, Humidity, Wind, Condition, RecordDate, Record, SecureWeather
+from tui_ssd.domain import Temperature, Humidity, Wind, Condition, RecordDate, Record, RecordList
 
 
 # TESTS FOR TEMPERATURE
@@ -158,5 +158,71 @@ def test_correct_creation_of_a_record_instance():
     assert obj.record_date.value == str(obj.record_date) == '29/02/2000@10:00:45'
 
 
-# TODO: tests for SecureWeather class
 # TEST FOR SECURE WEATHER CLASS
+@pytest.fixture
+def dummy_records() -> list[Record]:
+    return [
+        Record(Temperature(17), Humidity(25), Wind(5), Condition.create('1'), RecordDate.create('29/02/2000 10:00:45')),
+        Record(Temperature(21), Humidity(87), Wind(110), Condition.create('3'), RecordDate.create('20/10/2022 11:54:49')),
+        Record(Temperature(36), Humidity(40), Wind(0), Condition.create('1'), RecordDate.create('05/08/2023 13:00:00')),
+        Record(Temperature(-5), Humidity(4), Wind(20), Condition.create('4'), RecordDate.create('09/09/2000 21:12:45'))
+    ]
+
+
+@pytest.fixture
+def my_record_list(dummy_records) -> RecordList:
+    sw = RecordList()
+    for rec in dummy_records:
+        sw.add_record(rec)
+    return sw
+
+
+def test_correct_creation_of_records_list(my_record_list, dummy_records):
+    assert my_record_list.records == len(dummy_records)
+    for i in range(my_record_list.records):
+        assert my_record_list.record(i) == dummy_records[i]
+
+
+def test_wrong_index_raises_validation_error(my_record_list):
+    with pytest.raises(ValidationError):
+        my_record_list.record(99)
+
+
+def test_correct_removal_of_a_record_by_index(my_record_list, dummy_records):
+    my_record_list.remove_record(0)  # Remove the element at position 0
+    assert my_record_list.records == (len(dummy_records) - 1)
+    for i in range(my_record_list.records):
+        assert my_record_list.record(i) != dummy_records[0]
+
+
+def test_wrong_index_from_removal_rises_validation_error(my_record_list):
+    with pytest.raises(ValidationError):
+        my_record_list.remove_record(99)
+
+
+def test_correct_sorting_of_a_records_by_temperature(my_record_list, dummy_records):
+    my_record_list.sort_by_temperature()
+    dummy_records.sort(key=lambda x: x.temperature)
+    for i in range(my_record_list.records):
+        assert my_record_list.record(i) == dummy_records[i]
+
+
+def test_correct_sorting_of_a_records_by_humidity(my_record_list, dummy_records):
+    my_record_list.sort_by_humidity()
+    dummy_records.sort(key=lambda x: x.humidity)
+    for i in range(my_record_list.records):
+        assert my_record_list.record(i) == dummy_records[i]
+
+
+def test_correct_sorting_of_a_records_by_wind(my_record_list, dummy_records):
+    my_record_list.sort_by_wind()
+    dummy_records.sort(key=lambda x: x.wind)
+    for i in range(my_record_list.records):
+        assert my_record_list.record(i) == dummy_records[i]
+
+
+def test_correct_sorting_of_a_records_by_date(my_record_list, dummy_records):
+    my_record_list.sort_by_ascending_date()
+    dummy_records.sort(key=lambda x: x.record_date)
+    for i in range(my_record_list.records):
+        assert my_record_list.record(i) == dummy_records[i]
