@@ -1,51 +1,51 @@
 import csv
 import sys
-from pathlib import Path
 from typing import Tuple
 
 from valid8 import ValidationError
 
 from tui_ssd.menu import *
-
-
-# TODO: Implement and modify this after the implementation of domain
-# TODO: When sorting by something is activated, maintain the sorting until something else is selected (by default no sorting)
+from tui_ssd.domain import *
 
 
 class App:
     def __init__(self):
-        self.__menu = Menu.Builder(Description('Your Secure Weather TUI'), auto_select=lambda: self.__print_records()) \
+        self.__menu = Menu.Builder(Description('Your Secure Weather TUI'), auto_select=lambda: self.__connect()) \
             .with_entry(Entry.create('1', 'Add new record', on_selected=lambda: self.__add_record())) \
-            .with_entry(Entry.create('2', 'Collect records from sensors', on_selected=lambda: self.__generate_records())) \
-            .with_entry(Entry.create('3', 'Sort by humidity', on_selected=lambda: self.__sort_by_humidity())) \
+            .with_entry(Entry.create('2', 'Remove record', on_selected=lambda: self.__remove_record())) \
+            .with_entry(Entry.create('3', 'Collect records from sensors', on_selected=lambda: self.__generate_records())) \
             .with_entry(Entry.create('4', 'Sort by temperature', on_selected=lambda: self.__sort_by_temperature())) \
-            .with_entry(Entry.create('5', 'Sort by wind', on_selected=lambda: self.__sort_by_wind())) \
-            .with_entry(Entry.create('6', 'Sort by ascending date', on_selected=lambda: self.__sort_by_wind())) \
+            .with_entry(Entry.create('5', 'Sort by humidity', on_selected=lambda: self.__sort_by_humidity())) \
+            .with_entry(Entry.create('6', 'Sort by wind', on_selected=lambda: self.__sort_by_wind())) \
+            .with_entry(Entry.create('7', 'Sort by ascending date', on_selected=lambda: self.__sort_by_wind())) \
             .with_entry(Entry.create('0', 'Exit', on_selected=lambda: print('Cya!'), is_exit=True)) \
             .build()
         self.__record_list = RecordList()
 
-    # TODO: Continue to modify from here
+    def __connect(self) -> None:  # TODO: Implement connection to database
+        ...
+
     def __print_records(self) -> None:
-        print_sep = lambda: print('-' * 100)
+        print_sep = lambda: print('-' * 130)
         print_sep()
-        fmt = '%3s %-10s %-30s %-30s %10s'
-        print(fmt % ('#', 'DURATION', 'TITLE', 'AUTHOR', 'GENRE'))
+        fmt = '%-10s %-30s %-20s %-20s %-20s %-30s'
+        print(fmt % ('#', 'CONDITION', 'TEMPERATURE', 'HUMIDITY', 'WIND', 'DATE'))
         print_sep()
-        for index in range(self.__music_archive.songs()):
-            song = self.__music_archive.song(index)
-            print(fmt % (index + 1, song.duration.value, song.title.value, song.author.value, song.genre))
+        for index in range(self.__record_list.records):
+            rec = self.__record_list.record(index)
+            print(fmt % (index + 1, rec.condition.value, rec.temperature.value, rec.humidity.value,
+                         rec.wind.value, rec.record_date.value))
         print_sep()
 
-    def __add_record(self) -> None:
+    def __add_record(self) -> None:  # TODO: modify and adjust
         song = Song(*self.__read_song())
         self.__music_archive.add_song(song)
         self.__save()
         print('Song added!')
 
-    def __generate_records(self) -> None:
+    def __remove_record(self) -> None:  # TODO: modify and adjust
         def builder(value: str) -> int:
-            validate('value', int(value), min_value=0, max_value=self.__music_archive.songs())
+            validate('value', int(value), min_value=0, max_value=self.__record_list.records)
             return int(value)
 
         index = self.__read('Index (0 to cancel)', builder)
@@ -56,55 +56,42 @@ class App:
         self.__save()
         print('Song removed!')
 
-    def __sort_by_wind(self) -> None:
-        self.__music_archive.sort_by_title()
-        self.__save()
+    def generate_records(self) -> None:  # TODO: implement method to generate data from sensors
+        ...
 
     def __sort_by_temperature(self) -> None:
-        self.__music_archive.sort_by_duration()
-        self.__save()
+        self.__record_list.sort_by_temperature()
 
     def __sort_by_humidity(self) -> None:
-        rst = self.__music_archive.list_of_authors
-        print("LIST OF AUTHORS:")
-        print(str(rst))
+        self.__record_list.sort_by_humidity()
+
+    def __sort_by_wind(self) -> None:
+        self.__record_list.sort_by_wind()
+
+    def __sort_by_ascending_date(self) -> None:
+        self.__record_list.sort_by_ascending_date()
+
+    def __save(self) -> None:  # TODO: Implement method to save to database
+        ...
+
+    def __load(self) -> None:  # TODO: Implement method to fetch to database
+        print("No records found")
 
     def __run(self) -> None:
         try:
             self.__load()
         except ValueError as e:
             print(e)
-            print('Continuing with an empty list of songs...')
+            print("Error when connecting to backend...")
 
         self.__menu.run()
-
     # noinspection PyBroadException
     def run(self) -> None:
-        try:
-            self.__run()
-        except:
-            print('Panic error!', file=sys.stderr)
-
-    def __load(self) -> None:
-        if not Path(self.__filename).exists():
-            return
-
-        with open(self.__filename) as file:
-            reader = csv.reader(file, delimiter=self.__delimiter)
-            for row in reader:
-                validate('row length', row, length=4)
-                duration = Duration.parse(row[0])
-                title = Title(row[1])
-                author = Author(row[2])
-                genre = Genre(row[3])
-                self.__music_archive.add_song(Song(duration, title, author, genre))
-
-    def __save(self) -> None:
-        with open(self.__filename, 'w') as file:
-            writer = csv.writer(file, delimiter=self.__delimiter, lineterminator='\n')
-            for index in range(self.__music_archive.songs()):
-                song = self.__music_archive.song(index)
-                writer.writerow([song.duration, song.title, song.author, song.genre])
+        # try:
+        #     self.__run()
+        # except:
+        #     print('Panic error!', file=sys.stderr)
+        self.__run()  # TODO: Debug purpose remove when in production
 
     @staticmethod
     def __read(prompt: str, builder: Callable) -> Any:
@@ -116,12 +103,13 @@ class App:
             except (TypeError, ValueError, ValidationError) as e:
                 print(e)
 
-    def __read_song(self) -> Tuple[Duration, Title, Author, Genre]:
-        duration = self.__read('Duration', Duration.parse)
-        title = self.__read('Title', Title)
-        author = self.__read('Author', Author)
-        genre = self.__read('Genre', Genre)
-        return duration, title, author, genre
+    def __read_record(self) -> Tuple[Temperature, Humidity, Wind, Condition, RecordDate]:
+        temperature = self.__read('Temperature (-50, +50)', Temperature)
+        humidity = self.__read('Humidity (0, 100)', Humidity)
+        wind = self.__read('Wind (0, 200)', Wind)
+        condition = self.__read('Condition (1,2,3,4)', Condition.create)
+        date = self.__read('Date (dd/mm/yyyy HH:MM:SS)', RecordDate.create)
+        return temperature, humidity, wind, condition, date
 
 
 def main(name: str):
