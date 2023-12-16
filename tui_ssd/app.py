@@ -6,6 +6,8 @@ from valid8 import ValidationError
 
 from tui_ssd.menu import *
 from tui_ssd.domain import *
+import requests
+import json
 
 
 class App:
@@ -18,14 +20,50 @@ class App:
             .with_entry(Entry.create('5', 'Sort by humidity', on_selected=lambda: self.__sort_by_humidity())) \
             .with_entry(Entry.create('6', 'Sort by wind', on_selected=lambda: self.__sort_by_wind())) \
             .with_entry(Entry.create('7', 'Sort by ascending date', on_selected=lambda: self.__sort_by_wind())) \
-            .with_entry(Entry.create('0', 'Exit', on_selected=lambda: print('Cya!'), is_exit=True)) \
+            .with_entry(Entry.create('0', 'Exit', on_selected=lambda: self.__logout(), is_exit=True)) \
             .build()
         self.__record_list = RecordList()
+        self.__token = None
+        self.__LOGIN_URL = "http://localhost:8000/api/v1/auth/login/"
+        self.__RECORDS_URL = "http://localhost:8000/api/v1/records/"
+        self.__LOGOUT_URL = "http://localhost:8000/api/v1/auth/logout/"
 
     def __connect(self) -> None:  # TODO: Implement connection to database
-        ...
+        # Do something to connect maybe username and password and set the token, then if everything is good show the menu loop
+        # If everything is fine print records
+        """
+            Since this method is called everytime the records are printed in loop,
+            avoid reconnecting if a token is already set
+        """
+        # Temporary code down
+        credentials = {'username': 'normal_user', 'email': '', 'password': 'password_123'}
+        req = requests.post(self.__LOGIN_URL, json=credentials)
+        self.__token = req.json().get('key')
+        print(self.__token)  # TODO: Remove this, used for debug
+
+        self.__print_records()
+
+    def __logout(self) -> None:
+        req = requests.post(self.__LOGOUT_URL, headers={'Authorization': f'Token {self.__token}'})
+        self.__token = None
+        print("Cya!")
 
     def __print_records(self) -> None:
+        # Here we make the request for the records
+        __records = requests.get(self.__RECORDS_URL, headers={'Authorization': f'Token {self.__token}'})
+        __json_data = __records.json()
+        # Here we have the data
+        for i in __json_data:
+            # TODO: Create an object and use the method __add_record to add it to the list
+            print(i['condition'])
+            print(i['temperature'])
+            print(i['humidity'])
+            print(i['wind'])
+            # The date is in the format 2023-12-08T12:20:00+01:00
+            # TODO: Implement method parse_date to parse the data to our TUI format 29/02/2000 10:00:45
+            print(i['date'])
+
+        # Here we print it
         print_sep = lambda: print('-' * 130)
         print_sep()
         fmt = '%-10s %-30s %-20s %-20s %-20s %-30s'
