@@ -112,17 +112,29 @@ def test_correct_condition_creation_value_and_str(cond, expected_value):
     obj = Condition.create(cond)
     assert obj.value == expected_value
     assert str(obj) == expected_value
+    assert obj.enum_value == cond
 
 
 # TESTS FOR RECORD DATE
 @pytest.mark.parametrize('date, expected_value', [
-    ('09/09/2000 15:34:11', "09/09/2000@15:34:11"),
-    ('01/01/2000 00:00:00', '01/01/2000@00:00:00'),
-    ('31/12/2999 23:59:59', '31/12/2999@23:59:59'),
+    ('09/09/2000 15:34:11', "09/09/2000 at 15:34:11"),
+    ('01/01/2000 00:00:00', '01/01/2000 at 00:00:00'),
+    ('31/12/2999 23:59:59', '31/12/2999 at 23:59:59'),
 ])
 def test_correct_date_creation(date, expected_value):
     obj = RecordDate.create(date)
     assert obj.value == expected_value
+
+
+def test_correct_date_parsing_from_database():
+    obj = RecordDate.parse('2023-12-08T12:20:00+01:00')
+    assert obj.value == '08/12/2023 at 12:20:00'
+    assert obj.db_date == '2023-12-08T12:20'
+
+
+def test_wrong_date_parsing_raises_exception():
+    with pytest.raises(ValueError):
+        RecordDate.parse('a')
 
 
 @pytest.mark.parametrize('date', [
@@ -155,7 +167,7 @@ def test_correct_creation_of_a_record_instance():
     assert obj.humidity.value == 25 and str(obj.humidity) == '25'
     assert obj.wind.value == 5 and str(obj.wind) == '5'
     assert obj.condition.value == str(obj.condition) == 'CLOUDY'
-    assert obj.record_date.value == str(obj.record_date) == '29/02/2000@10:00:45'
+    assert obj.record_date.value == str(obj.record_date) == '29/02/2000 at 10:00:45'
 
 
 # TEST FOR SECURE WEATHER CLASS
@@ -226,3 +238,21 @@ def test_correct_sorting_of_a_records_by_date(my_record_list, dummy_records):
     dummy_records.sort(key=lambda x: x.record_date)
     for i in range(my_record_list.records):
         assert my_record_list.record(i) == dummy_records[i]
+
+
+def test_correct_list_dumping(my_record_list):
+    my_record_list.dump_list()
+    assert my_record_list.records == 0
+
+
+def test_correct_sorting_by_date_after_parsing():
+    rec1 = Record(Temperature(17), Humidity(25), Wind(5), Condition.create('1'), RecordDate.parse('2023-03-01T00:00:00+01:00'))
+    rec2 = Record(Temperature(21), Humidity(87), Wind(110), Condition.create('3'), RecordDate.parse('2023-01-01T00:00:00+01:00'))
+    rec3 = Record(Temperature(36), Humidity(40), Wind(0), Condition.create('1'), RecordDate.parse('2023-02-01T00:00:00+01:00'))
+    rc = RecordList()
+    rc.add_record(rec1)
+    rc.add_record(rec2)
+    rc.add_record(rec3)
+
+    rc.sort_by_ascending_date()
+    assert rc.record(0) == rec2

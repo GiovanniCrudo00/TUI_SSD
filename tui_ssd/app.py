@@ -8,7 +8,7 @@ from tui_ssd.menu import *
 from tui_ssd.domain import *
 import requests
 import json
-
+# TODO: Evaluate to remove add and remove methods on the local list
 
 class App:
     def __init__(self):
@@ -19,7 +19,8 @@ class App:
             .with_entry(Entry.create('4', 'Sort by temperature', on_selected=lambda: self.__sort_by_temperature())) \
             .with_entry(Entry.create('5', 'Sort by humidity', on_selected=lambda: self.__sort_by_humidity())) \
             .with_entry(Entry.create('6', 'Sort by wind', on_selected=lambda: self.__sort_by_wind())) \
-            .with_entry(Entry.create('7', 'Sort by ascending date', on_selected=lambda: self.__sort_by_wind())) \
+            .with_entry(Entry.create('7', 'Sort by ascending date', on_selected=lambda: self.__sort_by_ascending_date())) \
+            .with_entry(Entry.create('8', 'Update records list', on_selected=lambda: self.__load())) \
             .with_entry(Entry.create('0', 'Exit', on_selected=lambda: self.__logout(), is_exit=True)) \
             .build()
         self.__record_list = RecordList()
@@ -28,7 +29,7 @@ class App:
         self.__RECORDS_URL = "http://localhost:8000/api/v1/records/"
         self.__LOGOUT_URL = "http://localhost:8000/api/v1/auth/logout/"
 
-    def __connect(self) -> None:  # TODO: Implement connection to database
+    def __connect(self) -> None:  # TODO: Implement connection to database and login
         # Do something to connect maybe username and password and set the token, then if everything is good show the menu loop
         # If everything is fine print records
         """
@@ -36,11 +37,12 @@ class App:
             avoid reconnecting if a token is already set
         """
         # Temporary code down
-        credentials = {'username': 'normal_user', 'email': '', 'password': 'password_123'}
+        credentials = {'username': 'gibbi', 'email': '', 'password': 'password_123'}
         req = requests.post(self.__LOGIN_URL, json=credentials)
         self.__token = req.json().get('key')
         print(self.__token)  # TODO: Remove this, used for debug
-
+        # If login is good load data and then print
+        # TODO: after login make the first fetch if list is empty
         self.__print_records()
 
     def __logout(self) -> None:
@@ -49,25 +51,10 @@ class App:
         print("Cya!")
 
     def __print_records(self) -> None:
-        # Here we make the request for the records
-        __records = requests.get(self.__RECORDS_URL, headers={'Authorization': f'Token {self.__token}'})
-        __json_data = __records.json()
-        # Here we have the data
-        for i in __json_data:
-            # TODO: Create an object and use the method __add_record to add it to the list
-            print(i['condition'])
-            print(i['temperature'])
-            print(i['humidity'])
-            print(i['wind'])
-            # The date is in the format 2023-12-08T12:20:00+01:00
-            # TODO: Implement method parse_date to parse the data to our TUI format 29/02/2000 10:00:45
-            print(i['date'])
-
-        # Here we print it
         print_sep = lambda: print('-' * 130)
         print_sep()
         fmt = '%-10s %-30s %-20s %-20s %-20s %-30s'
-        print(fmt % ('#', 'CONDITION', 'TEMPERATURE', 'HUMIDITY', 'WIND', 'DATE'))
+        print(fmt % ('#', 'CONDITION', 'TEMPERATURE (˚C)', 'HUMIDITY (%)', 'WIND (Km/h)', 'DATE'))
         print_sep()
         for index in range(self.__record_list.records):
             rec = self.__record_list.record(index)
@@ -75,26 +62,26 @@ class App:
                          rec.wind.value, rec.record_date.value))
         print_sep()
 
-    def __add_record(self) -> None:  # TODO: modify and adjust
-        song = Song(*self.__read_song())
-        self.__music_archive.add_song(song)
-        self.__save()
-        print('Song added!')
+    def __add_record(self) -> None:
+        record = Record(*self.__read_record())
+        self.__save(record)
+        print('Record added!')
+
 
     def __remove_record(self) -> None:  # TODO: modify and adjust
         def builder(value: str) -> int:
             validate('value', int(value), min_value=0, max_value=self.__record_list.records)
             return int(value)
 
-        index = self.__read('Index (0 to cancel)', builder)
+        index = self.__read__str('Index (0 to cancel)', builder)
         if index == 0:
             print('Cancelled!')
             return
-        self.__music_archive.remove_song(index - 1)
-        self.__save()
-        print('Song removed!')
+        rec = self.__record_list.record(index - 1)
+        self.__remove_from_db(rec) # TODO: This will be remove_record
+        print('Record removed!')
 
-    def generate_records(self) -> None:  # TODO: implement method to generate data from sensors
+    def __generate_records(self) -> None:  # TODO: implement method to generate data from sensors
         ...
 
     def __sort_by_temperature(self) -> None:
@@ -109,30 +96,45 @@ class App:
     def __sort_by_ascending_date(self) -> None:
         self.__record_list.sort_by_ascending_date()
 
-    def __save(self) -> None:  # TODO: Implement method to save to database
-        ...
+    def __save(self, rec: Record) -> None:
+        __json_data = {'condition': rec.condition.enum_value, 'humidity': rec.humidity.value,
+                       'temperature': rec.temperature.value, 'wind': rec.wind.value, 'date': rec.record_date.db_date}
+        req = requests.post(self.__RECORDS_URL, headers={'Authorization': f'Token {self.__token}'}, data=__json_data)
+        if req.status_code == 200:
+            self.__load()
+        elif req.status_code == 405:
+            print("Missing permissions to perform this action")
+        else:
+            print("Error when updating new data...")
 
-    def __load(self) -> None:  # TODO: Implement method to fetch to database
-        print("No records found")
+    def __load(self) -> None:
+        self.__record_list.dump_list()  # Clear old data
+        # Fetch data from DB
+        __records = requests.get(self.__RECORDS_URL, headers={'Authorization': f'Token {self.__token}'})
+        __json_data = __records.json()
+        # Here we have the data
+        for i in __json_data:
+            rec = Record(Temperature(i['temperature']), Humidity(i['humidity']), Wind(i['wind']),
+                         Condition.create(i['condition']), RecordDate.parse(i['date']))
+            self.__record_list.add_record(rec)
+
+    def __remove_from_db(self, rec: Record) -> None:
+        # TODO: make request to remove by id (watch docs)
+        print(rec.wind.value)
 
     def __run(self) -> None:
-        try:
-            self.__load()
-        except ValueError as e:
-            print(e)
-            print("Error when connecting to backend...")
-
         self.__menu.run()
+
     # noinspection PyBroadException
     def run(self) -> None:
         # try:
         #     self.__run()
         # except:
         #     print('Panic error!', file=sys.stderr)
-        self.__run()  # TODO: Debug purpose remove when in production
+        self.__run()  # TODO: Debug purpose remove when in production LAST THING TO REMOVE
 
     @staticmethod
-    def __read(prompt: str, builder: Callable) -> Any:
+    def __read__str(prompt: str, builder: Callable) -> Any:
         while True:
             try:
                 line = input(f'{prompt}: ')
@@ -141,12 +143,23 @@ class App:
             except (TypeError, ValueError, ValidationError) as e:
                 print(e)
 
+    @staticmethod
+    def __read_integer(prompt: str, builder: Callable) -> Any:
+        while True:
+            try:
+                line = input(f'{prompt}: ')
+                val = line.strip()
+                res = builder(int(val))
+                return res
+            except (TypeError, ValueError, ValidationError) as e:
+                print(e)
+
     def __read_record(self) -> Tuple[Temperature, Humidity, Wind, Condition, RecordDate]:
-        temperature = self.__read('Temperature (-50, +50)', Temperature)
-        humidity = self.__read('Humidity (0, 100)', Humidity)
-        wind = self.__read('Wind (0, 200)', Wind)
-        condition = self.__read('Condition (1,2,3,4)', Condition.create)
-        date = self.__read('Date (dd/mm/yyyy HH:MM:SS)', RecordDate.create)
+        temperature = self.__read_integer('Temperature (-50, +50)', Temperature)
+        humidity = self.__read_integer('Humidity (0, 100)', Humidity)
+        wind = self.__read_integer('Wind (0, 200)', Wind)
+        condition = self.__read__str('Condition (1,2,3,4)', Condition.create)
+        date = self.__read__str('Date (dd/mm/yyyy HH:MM:SS)', RecordDate.create)
         return temperature, humidity, wind, condition, date
 
 

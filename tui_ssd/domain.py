@@ -7,18 +7,8 @@ import re
 from types import MappingProxyType
 from datetime import datetime
 
-"""
-DOMAIN CLASSES
-    Temperature: int                            Class:[DONE] Tests:[DONE]
-    Humidity: int                               Class:[DONE] Tests:[DONE]
-    Wind: int                                   Class:[DONE] Tests:[DONE]
-    Condition: Enum from 1 to 4                 Class:[DONE] Tests:[DONE]
-    Date: datetime.datetime python class        Class:[DONE] Tests:[DONE]
-    Record                                      Class:[DONE] Tests:[]
-    SecureWeather                               Class:[] Tests:[]
-"""
 
-
+# TODO: Implement the id domain primitive and add it to the model Record (then refactor tests, domain and app)
 @typechecked
 @dataclass(frozen=True, order=True)
 class Temperature:
@@ -86,6 +76,10 @@ class Condition:
     def value(self) -> str:
         return self.values_dictionary[self.__condition_value]
 
+    @property
+    def enum_value(self) -> str:
+        return str(self.__condition_value)
+
     @staticmethod
     def create(value: str) -> 'Condition':
         validate('value', value, min_len=1, max_len=1, instance_of=str, custom=pattern(r'[0-4]{1}'))
@@ -97,23 +91,27 @@ class Condition:
 @typechecked
 @dataclass(frozen=True, order=True)
 class RecordDate:
+    # TODO: Even if seconds are given, they are always set to zero, evaluate to refactor deleting them
     __date_value: datetime
-    create_key: InitVar[Any] = field(default="it must be the __create_key")
     __create_key = object()
     __MIN_DATA = datetime(2000, 1, 1, 0, 0, 0)
     __MAX_DATA = datetime(2999, 12, 31, 23, 59, 59)
+    create_key: InitVar[Any] = field(default="it must be the __create_key")
 
     def __post_init__(self, create_key):
-        validate('condition_value', self.__date_value, min_value=self.__MIN_DATA, max_value=self.__MAX_DATA,
-                 instance_of=datetime)
+        validate('condition_value', self.__date_value, min_value=self.__MIN_DATA, max_value=self.__MAX_DATA)
         validate('create_key', create_key, equals=self.__create_key)
 
     @property
     def value(self) -> str:
-        return str(f"{self.day:02}/{self.month:02}/{self.year:04}@{self.hour:02}:{self.minute:02}:{self.second:02}")
+        return str(f"{self.day:02}/{self.month:02}/{self.year:04} at {self.hour:02}:{self.minute:02}:{self.second:02}")
+
+    @property
+    def db_date(self) -> str:
+        return str(f"{self.year:04}-{self.month:02}-{self.day:02}T{self.hour:02}:{self.minute:02}")
 
     def __str__(self):
-        return str(f"{self.day:02}/{self.month:02}/{self.year:04}@{self.hour:02}:{self.minute:02}:{self.second:02}")
+        return str(f"{self.day:02}/{self.month:02}/{self.year:04} at {self.hour:02}:{self.minute:02}:{self.second:02}")
 
     @property
     def year(self) -> int:
@@ -141,7 +139,6 @@ class RecordDate:
 
     @staticmethod
     def create(value: str) -> 'RecordDate':
-        # "2023-12-08T23:54:00+01:00"
         """
             I expect from input a date like "09/09/2000 15:29:33"
         """
@@ -152,6 +149,13 @@ class RecordDate:
         __created_date = datetime(int(__year), int(__month), int(__day), int(__hour), int(__minute), int(__second))
 
         return RecordDate(__created_date, RecordDate.__create_key)
+
+    @staticmethod
+    def parse(value: str) -> 'RecordDate':
+        # The date in the database is in the format 2023-12-08T12:20:00+01:00
+
+        __create_date = datetime.strptime(value.split('+')[0], '%Y-%m-%dT%H:%M:%S')
+        return RecordDate(__create_date, RecordDate.__create_key)
 
 
 @typechecked
@@ -183,6 +187,9 @@ class RecordList:
     def remove_record(self, index: int) -> None:
         validate("record_index", index, min_value=0, max_value=self.records - 1)
         del self.__records[index]
+
+    def dump_list(self) -> None:
+        self.__records.clear()
 
     def sort_by_temperature(self) -> None:
         self.__records.sort(key=lambda x: x.temperature)
