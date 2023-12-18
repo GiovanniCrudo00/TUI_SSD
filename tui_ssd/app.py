@@ -8,7 +8,10 @@ from tui_ssd.menu import *
 from tui_ssd.domain import *
 import requests
 import json
-# TODO: Evaluate to remove add and remove methods on the local list
+from random import randint, choice
+
+# TODO: Evaluate to remove the method remove_record on the local list
+
 
 class App:
     def __init__(self):
@@ -67,7 +70,6 @@ class App:
         self.__save(record)
         print('Record added!')
 
-
     def __remove_record(self) -> None:  # TODO: modify and adjust
         def builder(value: str) -> int:
             validate('value', int(value), min_value=0, max_value=self.__record_list.records)
@@ -78,11 +80,21 @@ class App:
             print('Cancelled!')
             return
         rec = self.__record_list.record(index - 1)
-        self.__remove_from_db(rec) # TODO: This will be remove_record
+        self.__remove_from_db(rec)  # TODO: This will be remove_record
         print('Record removed!')
 
-    def __generate_records(self) -> None:  # TODO: implement method to generate data from sensors
-        ...
+    def __generate_records(self) -> None:
+        for i in range(24):
+            __today_date = datetime.now()
+            __date = RecordDate.create(f"{__today_date.day}/{__today_date.month}/{__today_date.year} {i:02}:00:00")
+            __temp = Temperature(randint(-50, 50))
+            __hum = Humidity(randint(0, 100))
+            __wind = Wind(randint(0, 200))
+            __cond = Condition.create(choice(['1', '2', '3', '4']))
+
+            __rec = Record(__temp, __hum, __wind, __cond, __date)
+            print(__rec)
+            self.__save(__rec)
 
     def __sort_by_temperature(self) -> None:
         self.__record_list.sort_by_temperature()
@@ -159,7 +171,7 @@ class App:
         humidity = self.__read_integer('Humidity (0, 100)', Humidity)
         wind = self.__read_integer('Wind (0, 200)', Wind)
         condition = self.__read__str('Condition (1,2,3,4)', Condition.create)
-        date = self.__read__str('Date (dd/mm/yyyy HH:MM:SS)', RecordDate.create)
+        date = self.__read__str('Date (dd/mm/yyyy HH:MM)', RecordDate.create)
         return temperature, humidity, wind, condition, date
 
 

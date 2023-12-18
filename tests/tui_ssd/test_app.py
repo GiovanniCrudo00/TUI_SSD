@@ -28,6 +28,7 @@ def test_app_main(mocked_print, mocked_input):
 # TODO: Test add a new record
 # TODO: Test app resist to wrong values from inputs
 # TODO: Test remove a record
+# TODO: Test generate record method
 # TODO: Test the user can cancel the removal of a record
 # TODO: Test sorting by temperature
 # TODO: Test sorting by humidity

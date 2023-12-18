@@ -117,9 +117,9 @@ def test_correct_condition_creation_value_and_str(cond, expected_value):
 
 # TESTS FOR RECORD DATE
 @pytest.mark.parametrize('date, expected_value', [
-    ('09/09/2000 15:34:11', "09/09/2000 at 15:34:11"),
-    ('01/01/2000 00:00:00', '01/01/2000 at 00:00:00'),
-    ('31/12/2999 23:59:59', '31/12/2999 at 23:59:59'),
+    ('09/09/2000 15:34', "09/09/2000 at 15:34"),
+    ('01/01/2000 00:00', '01/01/2000 at 00:00'),
+    ('31/12/2999 23:59', '31/12/2999 at 23:59'),
 ])
 def test_correct_date_creation(date, expected_value):
     obj = RecordDate.create(date)
@@ -128,7 +128,7 @@ def test_correct_date_creation(date, expected_value):
 
 def test_correct_date_parsing_from_database():
     obj = RecordDate.parse('2023-12-08T12:20:00+01:00')
-    assert obj.value == '08/12/2023 at 12:20:00'
+    assert obj.value == '08/12/2023 at 12:20'
     assert obj.db_date == '2023-12-08T12:20'
 
 
@@ -138,16 +138,15 @@ def test_wrong_date_parsing_raises_exception():
 
 
 @pytest.mark.parametrize('date', [
-    '29/02/2001 10:00:00',
-    '31/11/2000 10:00:00',
-    '30/11/2000 25:00:00',
-    '30/11/2000 10:60:00',
-    '30/11/2000 10:00:60',
+    '29/02/2001 10:00',
+    '31/11/2000 10:00',
+    '30/11/2000 25:00',
+    '30/11/2000 10:60',
     'a',
     '',
     ' ',
-    '01/01/3000 10:00:00',
-    '31/12/1999 10:00:00'
+    '01/01/3000 10:00',
+    '31/12/1999 10:00'
 ])
 def test_wrong_date_raises_exception(date):
     with pytest.raises(ValueError):
@@ -161,23 +160,23 @@ def test_correct_creation_of_a_record_instance():
     humidity = Humidity(25)
     wind = Wind(5)
     condition = Condition.create('2')
-    rec_date = RecordDate.create('29/02/2000 10:00:45')
+    rec_date = RecordDate.create('29/02/2000 10:00')
     obj = Record(temperature, humidity, wind, condition, rec_date)
     assert obj.temperature.value == 17 and str(obj.temperature) == '17'
     assert obj.humidity.value == 25 and str(obj.humidity) == '25'
     assert obj.wind.value == 5 and str(obj.wind) == '5'
     assert obj.condition.value == str(obj.condition) == 'CLOUDY'
-    assert obj.record_date.value == str(obj.record_date) == '29/02/2000 at 10:00:45'
+    assert obj.record_date.value == str(obj.record_date) == '29/02/2000 at 10:00'
 
 
 # TEST FOR SECURE WEATHER CLASS
 @pytest.fixture
 def dummy_records() -> list[Record]:
     return [
-        Record(Temperature(17), Humidity(25), Wind(5), Condition.create('1'), RecordDate.create('29/02/2000 10:00:45')),
-        Record(Temperature(21), Humidity(87), Wind(110), Condition.create('3'), RecordDate.create('20/10/2022 11:54:49')),
-        Record(Temperature(36), Humidity(40), Wind(0), Condition.create('1'), RecordDate.create('05/08/2023 13:00:00')),
-        Record(Temperature(-5), Humidity(4), Wind(20), Condition.create('4'), RecordDate.create('09/09/2000 21:12:45'))
+        Record(Temperature(17), Humidity(25), Wind(5), Condition.create('1'), RecordDate.create('29/02/2000 10:00')),
+        Record(Temperature(21), Humidity(87), Wind(110), Condition.create('3'), RecordDate.create('20/10/2022 11:54')),
+        Record(Temperature(36), Humidity(40), Wind(0), Condition.create('1'), RecordDate.create('05/08/2023 13:00')),
+        Record(Temperature(-5), Humidity(4), Wind(20), Condition.create('4'), RecordDate.create('09/09/2000 21:12'))
     ]
 
 

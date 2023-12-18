@@ -91,11 +91,10 @@ class Condition:
 @typechecked
 @dataclass(frozen=True, order=True)
 class RecordDate:
-    # TODO: Even if seconds are given, they are always set to zero, evaluate to refactor deleting them
     __date_value: datetime
     __create_key = object()
-    __MIN_DATA = datetime(2000, 1, 1, 0, 0, 0)
-    __MAX_DATA = datetime(2999, 12, 31, 23, 59, 59)
+    __MIN_DATA = datetime(2000, 1, 1, 0, 0)
+    __MAX_DATA = datetime(2999, 12, 31, 23, 59)
     create_key: InitVar[Any] = field(default="it must be the __create_key")
 
     def __post_init__(self, create_key):
@@ -104,14 +103,14 @@ class RecordDate:
 
     @property
     def value(self) -> str:
-        return str(f"{self.day:02}/{self.month:02}/{self.year:04} at {self.hour:02}:{self.minute:02}:{self.second:02}")
+        return str(f"{self.day:02}/{self.month:02}/{self.year:04} at {self.hour:02}:{self.minute:02}")
 
     @property
     def db_date(self) -> str:
         return str(f"{self.year:04}-{self.month:02}-{self.day:02}T{self.hour:02}:{self.minute:02}")
 
     def __str__(self):
-        return str(f"{self.day:02}/{self.month:02}/{self.year:04} at {self.hour:02}:{self.minute:02}:{self.second:02}")
+        return str(f"{self.day:02}/{self.month:02}/{self.year:04} at {self.hour:02}:{self.minute:02}")
 
     @property
     def year(self) -> int:
@@ -133,10 +132,6 @@ class RecordDate:
     def minute(self) -> int:
         return self.__date_value.minute
 
-    @property
-    def second(self) -> int:
-        return self.__date_value.second
-
     @staticmethod
     def create(value: str) -> 'RecordDate':
         """
@@ -144,9 +139,9 @@ class RecordDate:
         """
         __tmp_date, __tmp_time = value.split(' ')
         __day, __month, __year = __tmp_date.split('/')
-        __hour, __minute, __second = __tmp_time.split(':')
+        __hour, __minute = __tmp_time.split(':')
 
-        __created_date = datetime(int(__year), int(__month), int(__day), int(__hour), int(__minute), int(__second))
+        __created_date = datetime(int(__year), int(__month), int(__day), int(__hour), int(__minute))
 
         return RecordDate(__created_date, RecordDate.__create_key)
 
