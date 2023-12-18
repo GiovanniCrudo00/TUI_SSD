@@ -1,5 +1,5 @@
 from dataclasses import dataclass, InitVar, field
-from typing import Any, List
+from typing import Any, List, Optional
 from valid8 import validate
 from typeguard import typechecked
 from validation.regex import pattern
@@ -8,7 +8,15 @@ from types import MappingProxyType
 from datetime import datetime
 
 
-# TODO: Implement the id domain primitive and add it to the model Record (then refactor tests, domain and app)
+@typechecked
+@dataclass(frozen=True)
+class Id:
+    value: int
+
+    def __post_init__(self):
+        validate('value', self.value, min_value=1, max_value=99999, instance_of=int)
+
+
 @typechecked
 @dataclass(frozen=True, order=True)
 class Temperature:
@@ -161,6 +169,7 @@ class Record:
     wind: Wind
     condition: Condition
     record_date: RecordDate
+    id: Optional[Id] = None
 
 
 @typechecked
@@ -178,10 +187,6 @@ class RecordList:
 
     def add_record(self, rec: Record) -> None:
         self.__records.append(rec)
-
-    def remove_record(self, index: int) -> None:
-        validate("record_index", index, min_value=0, max_value=self.records - 1)
-        del self.__records[index]
 
     def dump_list(self) -> None:
         self.__records.clear()

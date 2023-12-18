@@ -10,8 +10,6 @@ import requests
 import json
 from random import randint, choice
 
-# TODO: Evaluate to remove the method remove_record on the local list
-
 
 class App:
     def __init__(self):
@@ -70,7 +68,7 @@ class App:
         self.__save(record)
         print('Record added!')
 
-    def __remove_record(self) -> None:  # TODO: modify and adjust
+    def __remove_record(self) -> None:
         def builder(value: str) -> int:
             validate('value', int(value), min_value=0, max_value=self.__record_list.records)
             return int(value)
@@ -80,13 +78,12 @@ class App:
             print('Cancelled!')
             return
         rec = self.__record_list.record(index - 1)
-        self.__remove_from_db(rec)  # TODO: This will be remove_record
-        print('Record removed!')
+        self.__remove_from_db(rec)
 
     def __generate_records(self) -> None:
         for i in range(24):
             __today_date = datetime.now()
-            __date = RecordDate.create(f"{__today_date.day}/{__today_date.month}/{__today_date.year} {i:02}:00:00")
+            __date = RecordDate.create(f"{__today_date.day}/{__today_date.month}/{__today_date.year} {i:02}:00")
             __temp = Temperature(randint(-50, 50))
             __hum = Humidity(randint(0, 100))
             __wind = Wind(randint(0, 200))
@@ -121,18 +118,26 @@ class App:
 
     def __load(self) -> None:
         self.__record_list.dump_list()  # Clear old data
+
         # Fetch data from DB
         __records = requests.get(self.__RECORDS_URL, headers={'Authorization': f'Token {self.__token}'})
         __json_data = __records.json()
         # Here we have the data
         for i in __json_data:
             rec = Record(Temperature(i['temperature']), Humidity(i['humidity']), Wind(i['wind']),
-                         Condition.create(i['condition']), RecordDate.parse(i['date']))
+                         Condition.create(i['condition']), RecordDate.parse(i['date']), id=Id(i['id']))
+
             self.__record_list.add_record(rec)
 
     def __remove_from_db(self, rec: Record) -> None:
-        # TODO: make request to remove by id (watch docs)
-        print(rec.wind.value)
+        req = requests.delete(url=f"{self.__RECORDS_URL}{rec.id.value}/", headers={'Authorization': f'Token {self.__token}'})
+        if req.status_code == 204 or req.status_code == 200:
+            print('Record removed!')
+            self.__load()
+        elif req.status_code == 405:
+            print("Missing permissions to perform this action")
+        else:
+            print("Error when updating new data...")
 
     def __run(self) -> None:
         self.__menu.run()

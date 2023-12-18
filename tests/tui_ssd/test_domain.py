@@ -1,6 +1,6 @@
 import pytest
 from valid8 import ValidationError
-from tui_ssd.domain import Temperature, Humidity, Wind, Condition, RecordDate, Record, RecordList
+from tui_ssd.domain import Temperature, Humidity, Wind, Condition, RecordDate, Record, RecordList, Id
 
 
 # TESTS FOR TEMPERATURE
@@ -26,6 +26,30 @@ def test_correct_temperature_creation_value_and_str(temp):
     obj = Temperature(temp)
     assert obj.value == temp
     assert str(obj) == str(temp)
+
+
+# TESTS FOR ID
+@pytest.mark.parametrize('id_val', [
+    1,
+    33,
+    99999
+])
+def test_correct_id_creation_value(id_val):
+    obj = Id(id_val)
+    assert obj.value == id_val
+
+
+@pytest.mark.parametrize('id_val', [
+    0,
+    100000,
+    -1,
+    'a',
+    '',
+    None
+])
+def test_wrong_id_raises_validation_error(id_val):
+    with pytest.raises(ValidationError):
+        Id(id_val)
 
 
 # TESTS FOR HUMIDITY
@@ -169,6 +193,22 @@ def test_correct_creation_of_a_record_instance():
     assert obj.record_date.value == str(obj.record_date) == '29/02/2000 at 10:00'
 
 
+def test_correct_record_creation_with_optional_field():  # TODO: Write this
+    temperature = Temperature(18)
+    humidity = Humidity(26)
+    wind = Wind(10)
+    condition = Condition.create('3')
+    rec_date = RecordDate.create('29/03/2000 15:10')
+    rec_id = Id(45)
+    obj = Record(temperature, humidity, wind, condition, rec_date, id=rec_id)
+    assert obj.temperature.value == 18 and str(obj.temperature) == '18'
+    assert obj.humidity.value == 26 and str(obj.humidity) == '26'
+    assert obj.wind.value == 10 and str(obj.wind) == '10'
+    assert obj.condition.value == str(obj.condition) == 'RAINY'
+    assert obj.record_date.value == str(obj.record_date) == '29/03/2000 at 15:10'
+    assert obj.id == rec_id
+
+
 # TEST FOR SECURE WEATHER CLASS
 @pytest.fixture
 def dummy_records() -> list[Record]:
@@ -197,18 +237,6 @@ def test_correct_creation_of_records_list(my_record_list, dummy_records):
 def test_wrong_index_raises_validation_error(my_record_list):
     with pytest.raises(ValidationError):
         my_record_list.record(99)
-
-
-def test_correct_removal_of_a_record_by_index(my_record_list, dummy_records):
-    my_record_list.remove_record(0)  # Remove the element at position 0
-    assert my_record_list.records == (len(dummy_records) - 1)
-    for i in range(my_record_list.records):
-        assert my_record_list.record(i) != dummy_records[0]
-
-
-def test_wrong_index_from_removal_rises_validation_error(my_record_list):
-    with pytest.raises(ValidationError):
-        my_record_list.remove_record(99)
 
 
 def test_correct_sorting_of_a_records_by_temperature(my_record_list, dummy_records):
