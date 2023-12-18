@@ -1,14 +1,14 @@
 import csv
 import sys
 from typing import Tuple
-
 from valid8 import ValidationError
-
 from tui_ssd.menu import *
 from tui_ssd.domain import *
 import requests
 import json
 from random import randint, choice
+import getpass
+from os import system
 
 
 class App:
@@ -30,21 +30,29 @@ class App:
         self.__RECORDS_URL = "http://localhost:8000/api/v1/records/"
         self.__LOGOUT_URL = "http://localhost:8000/api/v1/auth/logout/"
 
-    def __connect(self) -> None:  # TODO: Implement connection to database and login
-        # Do something to connect maybe username and password and set the token, then if everything is good show the menu loop
-        # If everything is fine print records
-        """
-            Since this method is called everytime the records are printed in loop,
-            avoid reconnecting if a token is already set
-        """
-        # Temporary code down
-        credentials = {'username': 'gibbi', 'email': '', 'password': 'password_123'}
-        req = requests.post(self.__LOGIN_URL, json=credentials)
-        self.__token = req.json().get('key')
-        print(self.__token)  # TODO: Remove this, used for debug
-        # If login is good load data and then print
-        # TODO: after login make the first fetch if list is empty
-        self.__print_records()
+    def __connect(self) -> None:
+        if self.__token is None:
+            print("Hello user, please enter your credentials below.")
+            username = input("Username: ")
+            password = getpass.getpass("Password: ")
+
+            user = Username(username)
+            passw = Password(password)
+
+            credentials = {'username': user.value, 'email': '', 'password': passw.value}
+            req = requests.post(self.__LOGIN_URL, json=credentials)
+            if req.status_code != 200:
+                print('Unable to login, please check your credentials...')
+                print()
+            else:
+                self.__token = req.json().get('key')
+                print(f"TOKEN: {self.__token}")  # TODO: Remove this, used for debug
+                # If login is good load data and then print
+                if self.__record_list.records == 0:
+                    self.__load()
+                self.__print_records()
+        else:
+            self.__print_records()
 
     def __logout(self) -> None:
         req = requests.post(self.__LOGOUT_URL, headers={'Authorization': f'Token {self.__token}'})
@@ -52,6 +60,7 @@ class App:
         print("Cya!")
 
     def __print_records(self) -> None:
+        system('clear')
         print_sep = lambda: print('-' * 130)
         print_sep()
         fmt = '%-10s %-30s %-20s %-20s %-20s %-30s'
@@ -144,10 +153,15 @@ class App:
 
     # noinspection PyBroadException
     def run(self) -> None:
-        # try:
-        #     self.__run()
-        # except:
-        #     print('Panic error!', file=sys.stderr)
+        """
+        try:
+            self.__run()
+        except requests.exceptions.ConnectionError:
+            print("Error while connecting, shutting down...")
+        except:
+            print('Panic error!', file=sys.stderr)
+        """
+
         self.__run()  # TODO: Debug purpose remove when in production LAST THING TO REMOVE
 
     @staticmethod

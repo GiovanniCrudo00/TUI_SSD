@@ -202,3 +202,28 @@ class RecordList:
 
     def sort_by_ascending_date(self) -> None:
         self.__records.sort(key=lambda x: x.record_date)
+
+
+@typechecked
+@dataclass(frozen=True)
+class Username:
+    value: str
+
+    def __post_init__(self):
+        validate('value', self.value, min_len=4, max_len=150, custom=pattern(r'[A-Za-z\@\.\_\-]+'))
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+
+@typechecked
+@dataclass(frozen=True)
+class Password:
+    value: str
+
+    def __post_init__(self):
+        # @/./+/-/_
+        validate('value', self.value, min_len=8, max_len=150, custom=pattern(r'[a-zA-Z][A-Za-z0-9\@\.\_\-]+'))
+
+    def __str__(self) -> str:
+        return str(self.value)

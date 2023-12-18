@@ -1,6 +1,6 @@
 import pytest
 from valid8 import ValidationError
-from tui_ssd.domain import Temperature, Humidity, Wind, Condition, RecordDate, Record, RecordList, Id
+from tui_ssd.domain import *
 
 
 # TESTS FOR TEMPERATURE
@@ -283,3 +283,49 @@ def test_correct_sorting_by_date_after_parsing():
 
     rc.sort_by_ascending_date()
     assert rc.record(0) == rec2
+
+
+@pytest.mark.parametrize('value', [
+    'Mr_Bean_',
+    'mr_bean_user',
+    'mr_be@n-@',
+])
+def test_correct_username_creation_value_and_str(value):
+    obj = Username(value)
+    assert str(obj) == value
+    assert obj.value == value
+
+
+@pytest.mark.parametrize('value', [
+    'mr',
+    '',
+    ' ',
+    '1767user6181',
+    None
+])
+def test_wrong_username_raises_exception(value):
+    with pytest.raises(ValidationError):
+        Username(value)
+
+
+@pytest.mark.parametrize('value', [
+    'password_123',
+    'my-secure_p@ssword78',
+    'pass_word_123',
+])
+def test_correct_password_creation_value_and_str(value):
+    obj = Password(value)
+    assert str(obj) == value
+    assert obj.value == value
+
+
+@pytest.mark.parametrize('value', [
+    '98891787831',  # No only numeric passwords (django specs)
+    '',
+    ' ',
+    'pass',
+    None
+])
+def test_wrong_password_raises_exception(value):
+    with pytest.raises(ValidationError):
+        Password(value)
