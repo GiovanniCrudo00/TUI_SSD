@@ -33,24 +33,23 @@ class App:
     def __connect(self) -> None:
         if self.__token is None:
             print("Hello user, please enter your credentials below.")
-            username = input("Username: ")
-            password = getpass.getpass("Password: ")
+            while self.__token is None:
+                username = input("Username: ")
+                password = getpass.getpass("Password: ")
 
-            user = Username(username)
-            passw = Password(password)
+                user = Username(username)
+                passw = Password(password)
 
-            credentials = {'username': user.value, 'email': '', 'password': passw.value}
-            req = requests.post(self.__LOGIN_URL, json=credentials)
-            if req.status_code != 200:
-                print('Unable to login, please check your credentials...')
-                print()
-            else:
-                self.__token = req.json().get('key')
-                print(f"TOKEN: {self.__token}")  # TODO: Remove this, used for debug
-                # If login is good load data and then print
-                if self.__record_list.records == 0:
-                    self.__load()
-                self.__print_records()
+                credentials = {'username': user.value, 'email': '', 'password': passw.value}
+                req = requests.post(self.__LOGIN_URL, json=credentials)
+                if req.status_code != 200:
+                    print('Unable to login, please check your credentials...')
+                else:
+                    self.__token = req.json().get('key')
+                    # If login is good load data and then print
+                    if self.__record_list.records == 0:
+                        self.__load()
+                    self.__print_records()
         else:
             self.__print_records()
 
@@ -75,6 +74,7 @@ class App:
     def __add_record(self) -> None:
         record = Record(*self.__read_record())
         self.__save(record)
+        self.__load()
         print('Record added!')
 
     def __remove_record(self) -> None:
@@ -99,8 +99,9 @@ class App:
             __cond = Condition.create(choice(['1', '2', '3', '4']))
 
             __rec = Record(__temp, __hum, __wind, __cond, __date)
-            print(__rec)
             self.__save(__rec)
+        print('Data collected!')
+        self.__load()
 
     def __sort_by_temperature(self) -> None:
         self.__record_list.sort_by_temperature()
@@ -118,8 +119,8 @@ class App:
         __json_data = {'condition': rec.condition.enum_value, 'humidity': rec.humidity.value,
                        'temperature': rec.temperature.value, 'wind': rec.wind.value, 'date': rec.record_date.db_date}
         req = requests.post(self.__RECORDS_URL, headers={'Authorization': f'Token {self.__token}'}, data=__json_data)
-        if req.status_code == 200:
-            self.__load()
+        if req.status_code == 201 or req.status_code == 200:
+            print('Record saved!')
         elif req.status_code == 405:
             print("Missing permissions to perform this action")
         else:

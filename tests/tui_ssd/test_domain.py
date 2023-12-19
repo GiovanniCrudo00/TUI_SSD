@@ -193,7 +193,7 @@ def test_correct_creation_of_a_record_instance():
     assert obj.record_date.value == str(obj.record_date) == '29/02/2000 at 10:00'
 
 
-def test_correct_record_creation_with_optional_field():  # TODO: Write this
+def test_correct_record_creation_with_optional_field():
     temperature = Temperature(18)
     humidity = Humidity(26)
     wind = Wind(10)

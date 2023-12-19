@@ -143,7 +143,7 @@ class RecordDate:
     @staticmethod
     def create(value: str) -> 'RecordDate':
         """
-            I expect from input a date like "09/09/2000 15:29:33"
+            I expect from input a date like "24/09/2000 15:29"
         """
         __tmp_date, __tmp_time = value.split(' ')
         __day, __month, __year = __tmp_date.split('/')
