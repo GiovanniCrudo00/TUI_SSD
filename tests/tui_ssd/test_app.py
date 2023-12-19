@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import patch, mock_open, Mock, call, MagicMock
 from tui_ssd.app import App, main
 from tui_ssd.domain import *
+import requests
 
 
 @pytest.fixture
@@ -137,13 +138,15 @@ def test_app_correct_remove_record(mocked_delete, mocked_get, mocked_post, mocke
     mocked_get.return_value = mocked_response_get
     mocked_response_get.json.return_value = my_json
 
-    mocked__res_delete = Mock()
-    mocked__res_delete.status_code = 204
+    mocked_response = MagicMock()
+    mocked_response.status_code = 204
+    mocked_delete.return_value = mocked_response
 
     App().run()
     mocked_input.assert_called()
     mocked_delete.assert_called_with(url=f'http://localhost:8000/api/v1/records/{44}/',
                                      headers={'Authorization': f'Token {mocked_token}'})
+    mocked_print.assert_any_call('Record removed!')
     mocked_print.assert_any_call('Cya!')
 
 
@@ -279,13 +282,12 @@ def test_app_sorting_by_date(mocked_get, mocked_post, mocked_print, mocked_input
     mocked_print.assert_any_call('Cya!')
 
 
-# TODO: test wrong credentials provided
 @patch('getpass.getpass', side_effect=['wrong_pass', 'valid_pass'])
-@patch('builtins.input', side_effect=['fake_username', 'wrong_pass', 'username', 'valid_pass', '0', '0'])
+@patch('builtins.input', side_effect=['fake_username', 'wrong_pass', 'username', 'valid_pass', '0'])
 @patch('builtins.print')
 @patch('requests.post')
 @patch('requests.get')
-def test_app_wrong_credentials_given(mocked_get, mocked_post, mocked_print, mocked_input, mocked_getpass, my_json):
+def test_app_wrong_credentials_given(mocked_get, mocked_post, mocked_print, mocked_input, mocked_getpass):
     mocked_bad_response = MagicMock()
     mocked_bad_response.status_code = 400
 
@@ -313,6 +315,77 @@ def test_app_wrong_credentials_given(mocked_get, mocked_post, mocked_print, mock
     mocked_print.assert_any_call('Unable to login, please check your credentials...')
 
 
-# TODO: test permission restrictions
-# TODO: test the fetch of data from db 8. of menu
-# TODO: Test the global exception handler
+@patch('getpass.getpass', side_effect=['valid_pass'])
+@patch('builtins.input', side_effect=['fake_username', 'valid_pass', '1', '40', '60', '13', '1', '20/10/2022 11:54', '0'])
+@patch('builtins.print')
+@patch('requests.post')
+@patch('requests.get')
+def test_app_gives_unauthorized_if_normal_user_add_new_data(mocked_get, mocked_post, mocked_print, mocked_input, mocked_getpass):
+    mocked_bad_response = MagicMock()
+    mocked_bad_response.status_code = 405
+
+    mocked_ok_response = MagicMock()
+    mocked_ok_response.status_code = 200
+
+    mocked_post.side_effect = [mocked_ok_response, mocked_bad_response, mocked_ok_response]
+
+    App().run()
+    assert mocked_post.call_count == 3  # Login, add record, logout
+    mocked_input.assert_called()
+
+    mocked_print.assert_any_call('Missing permissions to perform this action')
+
+
+@patch('getpass.getpass', side_effect=['valid_pass'])
+@patch('builtins.input', side_effect=['fake_username', 'valid_pass', '2', '1', '0'])
+@patch('builtins.print')
+@patch('requests.post')
+@patch('requests.get')
+@patch('requests.delete')
+def test_app_gives_unauthorized_if_normal_user_delete_data(mocked_delete, mocked_get, mocked_post, mocked_print,
+                                                           mocked_input, mocked_getpass, my_json):
+    mocked_response = MagicMock()
+    mocked_response.status_code = 200
+    mocked_post.return_value = mocked_response
+    mocked_token = mocked_post().json().get()
+
+    mocked_response_get = Mock()
+    mocked_response_get.status_code = 200
+    mocked_get.return_value = mocked_response_get
+    mocked_response_get.json.return_value = my_json
+
+    mocked_response = MagicMock()
+    mocked_response.status_code = 405
+    mocked_delete.return_value = mocked_response
+
+    App().run()
+    mocked_input.assert_called()
+    assert mocked_get.call_count == 1
+    assert mocked_post.call_count == 3
+
+    mocked_delete.assert_called()
+    mocked_print.assert_any_call('Missing permissions to perform this action')
+
+
+@patch('getpass.getpass', side_effect=['valid_pass'])
+@patch('builtins.input', side_effect=['fake_username', 'valid_pass', '2', '1', '0'])
+@patch('builtins.print')
+@patch('requests.post')
+def test_app_connection_error_exception_is_raised(mocked_post, mocked_print, mocked_input, mocked_getpass):
+    mocked_post.side_effect = requests.exceptions.ConnectionError()
+    App().run()
+    mocked_print.assert_any_call('*** Your Secure Weather TUI ***')
+    mocked_print.assert_any_call('Hello user, please enter your credentials below.')
+    mocked_input.assert_any_call('Username: ')
+    mocked_getpass.assert_any_call('Password: ')
+    mocked_input.assert_called()
+    mocked_print.assert_any_call('Error while connecting, shutting down...')
+
+
+@patch('builtins.input', side_effect=['0'])
+@patch('builtins.print')
+def test_app_global_exception_handler(mocked_print, mocked_input):
+    exception_mock = MagicMock()
+    exception_mock.side_effect = Mock(side_effect=Exception('AnExceptionThatBreaksTheCode'))
+
+    App().run()

@@ -123,8 +123,6 @@ class App:
             print('Record saved!')
         elif req.status_code == 405:
             print("Missing permissions to perform this action")
-        else:
-            print("Error when updating new data...")
 
     def __load(self) -> None:
         self.__record_list.dump_list()  # Clear old data
@@ -141,29 +139,23 @@ class App:
 
     def __remove_from_db(self, rec: Record) -> None:
         req = requests.delete(url=f"{self.__RECORDS_URL}{rec.id.value}/", headers={'Authorization': f'Token {self.__token}'})
-        if req.status_code == 204 or req.status_code == 200:
+        if req.status_code == 204:
             print('Record removed!')
             self.__load()
         elif req.status_code == 405:
             print("Missing permissions to perform this action")
-        else:
-            print("Error when updating new data...")
 
     def __run(self) -> None:
         self.__menu.run()
 
     # noinspection PyBroadException
     def run(self) -> None:
-        """
         try:
             self.__run()
         except requests.exceptions.ConnectionError:
             print("Error while connecting, shutting down...")
         except:
             print('Panic error!', file=sys.stderr)
-        """
-
-        self.__run()  # TODO: Debug purpose remove when in production LAST THING TO REMOVE
 
     @staticmethod
     def __read__str(prompt: str, builder: Callable) -> Any:
